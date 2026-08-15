@@ -16,8 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_16.2.app
+      # The exact Xcode versions on the runner image change over time, so the
+      # newest installed one is picked at run time instead of being hardcoded.
+      - name: Select newest Xcode
+        run: |
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode*.app
+          NEWEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          echo "Using $NEWEST"
+          sudo xcode-select -switch "$NEWEST/Contents/Developer"
 
       - name: Show toolchain
         run: |
@@ -26,6 +33,7 @@ jobs:
 
       - name: Build for device (unsigned)
         run: |
+          set -o pipefail
           xcodebuild clean build \
             -project NetScope.xcodeproj \
             -scheme NetScope \
