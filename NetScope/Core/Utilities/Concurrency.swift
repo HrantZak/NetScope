@@ -7,9 +7,16 @@ import Foundation
 /// that means thousands of simultaneous sockets, which the OS throttles and the
 /// Wi-Fi radio hates. This keeps exactly `limit` probes in flight and refills
 /// the window as tasks complete, so throughput stays high and memory flat.
+/// The `isolation` parameter makes the function inherit the caller's actor.
+/// Without it, a `onResult` closure that touches main-actor state (as the
+/// device detail screen's does) would be an actor-isolated, non-`Sendable`
+/// value being handed to a `nonisolated` function — which Swift 6 rejects.
+/// Inheriting isolation keeps the result handler on the caller's actor while
+/// the probes themselves still run on the concurrent pool.
 func concurrentForEach<Item: Sendable, Output: Sendable>(
     _ items: [Item],
     limit: Int,
+    isolation: isolated (any Actor)? = #isolation,
     operation: @escaping @Sendable (Item) async -> Output,
     onResult: (Output) async -> Void
 ) async {
