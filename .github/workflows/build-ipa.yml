@@ -1,0 +1,51 @@
+name: Build unsigned IPA
+
+# Builds NetScope on a macOS runner and publishes an unsigned .ipa as an
+# artifact. The IPA cannot be installed as-is: sign it locally with Sideloadly
+# or AltStore using your own Apple ID.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build for device (unsigned)
+        run: |
+          xcodebuild clean build \
+            -project NetScope.xcodeproj \
+            -scheme NetScope \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Package into an IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/NetScope.app Payload/
+          zip -qry NetScope.ipa Payload
+          ls -lh NetScope.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NetScope-unsigned-ipa
+          path: NetScope.ipa
+          retention-days: 30
