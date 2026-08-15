@@ -181,7 +181,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-					"-lresolv",
 				PRODUCT_BUNDLE_IDENTIFIER = com.netscope.NetScope;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
