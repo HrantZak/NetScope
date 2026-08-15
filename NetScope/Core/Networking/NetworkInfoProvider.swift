@@ -33,13 +33,16 @@ enum NetworkInfoProvider {
         snapshot.broadcast = interface.broadcast ?? interface.subnet.broadcastAddress
         snapshot.gateway = RouteTable.defaultGateway()
 
-        var resolvers = DNSResolver.systemResolvers()
+        let resolvers = DNSResolver.systemResolvers()
         if resolvers.isEmpty, let gateway = snapshot.gateway {
-            // Home routers almost always proxy DNS; showing the gateway is more
-            // useful than showing nothing.
-            resolvers = [gateway]
+            // Home routers almost always proxy DNS, so the gateway is a far
+            // better answer than nothing — flagged as inferred so the UI can
+            // say so instead of presenting a guess as fact.
+            snapshot.dnsServers = [gateway]
+            snapshot.dnsServersAreInferred = true
+        } else {
+            snapshot.dnsServers = resolvers
         }
-        snapshot.dnsServers = resolvers
 
         if let gateway = snapshot.gateway,
            let mac = RouteTable.arpTable()[gateway] {

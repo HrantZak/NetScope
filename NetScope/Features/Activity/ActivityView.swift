@@ -239,7 +239,7 @@ struct ActivityView: View {
                     }
                 }
 
-                Text("\(device.ipAddress) · seen \(device.timesSeen)×")
+                Text(verbatim: "\(device.ipAddress.description) · seen \(device.timesSeen)×")
                     .font(.technical(11))
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .lineLimit(1)

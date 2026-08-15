@@ -47,7 +47,13 @@ enum DNSResolver {
                     return
                 }
 
-                let name = String(cString: hostBuffer)
+                // Decode up to the NUL terminator. `String(cString:)` is
+                // deprecated for `[CChar]` in current Swift.
+                let name = hostBuffer.withUnsafeBufferPointer { pointer -> String in
+                    let bytes = UnsafeRawBufferPointer(pointer).prefix { $0 != 0 }
+                    return String(decoding: bytes, as: UTF8.self)
+                }
+
                 // Some resolvers echo the address back instead of failing.
                 continuation.resume(returning: name.isEmpty || name == address.description ? nil : name)
             }
@@ -56,29 +62,16 @@ enum DNSResolver {
 
     /// IPv4 DNS servers currently configured for the active interface.
     ///
-    /// `res_ninit` is public libresolv API (linked via `-lresolv`); when it is
-    /// unavailable or returns nothing, callers fall back to showing the gateway.
+    /// Always empty on iOS. Reading the resolver configuration needs `libresolv`
+    /// (`res_ninit` / `__res_state`), and the iOS SDK does not expose those
+    /// symbols to Swift — there is no public replacement. Callers fall back to
+    /// showing the gateway, which is the DNS server on the overwhelming majority
+    /// of home networks, and label it as inferred rather than measured.
+    ///
+    /// Kept as a seam: if a supported API ever appears, only this function needs
+    /// to change.
     static func systemResolvers() -> [IPv4] {
-        var state = __res_state()
-        guard res_9_ninit(&state) == 0 else { return [] }
-        defer { res_9_ndestroy(&state) }
-
-        let count = Int(state.nscount)
-        guard count > 0 else { return [] }
-
-        var servers: [IPv4] = []
-        withUnsafeBytes(of: &state.nsaddr_list) { raw in
-            let stride = MemoryLayout<sockaddr_in>.size
-            let available = min(count, raw.count / stride)
-            for index in 0..<available {
-                let sa = raw.loadUnaligned(fromByteOffset: index * stride, as: sockaddr_in.self)
-                guard sa.sin_family == sa_family_t(AF_INET) else { continue }
-                let address = IPv4(networkOrder: sa.sin_addr.s_addr)
-                guard address.raw != 0, !servers.contains(address) else { continue }
-                servers.append(address)
-            }
-        }
-        return servers
+        []
     }
 
     // MARK: - Private

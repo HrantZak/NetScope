@@ -97,33 +97,47 @@ struct NetworkStatistics: Sendable, Hashable {
         statistics.fastestDevice = fastest
         statistics.slowestDevice = slowest
 
-        statistics.kindBuckets = kindCounts
-            .map { Bucket(label: $0.key.title, count: $0.value, symbolName: $0.key.symbolName) }
-            .sorted { $0.count == $1.count ? $0.label < $1.label : $0.count > $1.count }
+        // Built step by step with explicit types: the chained
+        // map/sorted/prefix/map form pushed the type-checker past its budget.
+        var kindBuckets: [Bucket] = []
+        for (kind, count) in kindCounts {
+            kindBuckets.append(Bucket(label: kind.title, count: count, symbolName: kind.symbolName))
+        }
+        statistics.kindBuckets = rank(kindBuckets, limit: nil)
 
-        statistics.vendorBuckets = vendorCounts
-            .map { Bucket(label: $0.key, count: $0.value, symbolName: "building.2.fill") }
-            .sorted { $0.count == $1.count ? $0.label < $1.label : $0.count > $1.count }
-            .prefix(8)
-            .map { $0 }
+        var vendorBuckets: [Bucket] = []
+        for (vendor, count) in vendorCounts {
+            vendorBuckets.append(Bucket(label: vendor, count: count, symbolName: "building.2.fill"))
+        }
+        statistics.vendorBuckets = rank(vendorBuckets, limit: 8)
 
-        statistics.topPorts = portCounts
-            .map { entry in
-                Bucket(
-                    label: "\(entry.key) · \(PortCatalog.name(for: entry.key) ?? "Unknown")",
-                    count: entry.value,
-                    symbolName: PortCatalog.symbol(for: entry.key)
-                )
-            }
-            .sorted { $0.count == $1.count ? $0.label < $1.label : $0.count > $1.count }
-            .prefix(8)
-            .map { $0 }
+        var portBuckets: [Bucket] = []
+        for (port, count) in portCounts {
+            let name: String = PortCatalog.name(for: port) ?? "Unknown"
+            let label: String = "\(port) · \(name)"
+            portBuckets.append(Bucket(label: label, count: count, symbolName: PortCatalog.symbol(for: port)))
+        }
+        statistics.topPorts = rank(portBuckets, limit: 8)
 
         let bandLabels = ["< 10 ms", "10–50 ms", "50–200 ms", "> 200 ms"]
-        statistics.latencyBuckets = zip(bandLabels, latencyBands).map {
-            Bucket(label: $0.0, count: $0.1, symbolName: "timer")
+        var latencyBuckets: [Bucket] = []
+        for (index, label) in bandLabels.enumerated() {
+            latencyBuckets.append(Bucket(label: label, count: latencyBands[index], symbolName: "timer"))
         }
+        statistics.latencyBuckets = latencyBuckets
 
         return statistics
+    }
+
+    /// Sorts buckets by descending count, breaking ties alphabetically, and
+    /// optionally keeps only the leading `limit`.
+    private static func rank(_ buckets: [Bucket], limit: Int?) -> [Bucket] {
+        var sorted = buckets
+        sorted.sort { lhs, rhs in
+            if lhs.count == rhs.count { return lhs.label < rhs.label }
+            return lhs.count > rhs.count
+        }
+        guard let limit, sorted.count > limit else { return sorted }
+        return Array(sorted[0..<limit])
     }
 }

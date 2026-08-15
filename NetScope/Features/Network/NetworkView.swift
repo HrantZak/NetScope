@@ -119,7 +119,7 @@ struct NetworkView: View {
                 DetailRow(label: "Broadcast", value: snapshot.broadcast?.description, systemImage: "dot.radiowaves.left.and.right")
                 Divider()
                 DetailRow(
-                    label: "DNS servers",
+                    label: snapshot.dnsServersAreInferred ? "DNS (inferred)" : "DNS servers",
                     value: snapshot.dnsServers.isEmpty
                         ? nil
                         : snapshot.dnsServers.map(\.description).joined(separator: "\n"),
@@ -136,6 +136,18 @@ struct NetworkView: View {
                     Divider()
                     DetailRow(label: "Router vendor", value: vendor, systemImage: "wifi.router", isMonospaced: false)
                 }
+            }
+
+            if snapshot.dnsServersAreInferred {
+                HStack(alignment: .top, spacing: Theme.Spacing.s) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11))
+                    Text("iOS gives apps no way to read the resolver configuration, so the gateway is shown — it is the DNS server on most home networks, but it is a deduction, not a measurement.")
+                        .font(.system(size: 11))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(Theme.Colors.textTertiary)
+                .padding(.top, Theme.Spacing.s)
             }
         }
         .cardSurface()

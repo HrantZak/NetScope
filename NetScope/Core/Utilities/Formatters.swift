@@ -15,21 +15,21 @@ enum Formatters {
         return formatter
     }()
 
-    nonisolated(unsafe) static let time: DateFormatter = {
+    static let time: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter
     }()
 
-    nonisolated(unsafe) static let dateTime: DateFormatter = {
+    static let dateTime: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter
     }()
 
-    nonisolated(unsafe) static let shortDate: DateFormatter = {
+    static let shortDate: DateFormatter = {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("MMMd")
         return formatter

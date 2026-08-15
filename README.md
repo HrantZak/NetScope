@@ -142,22 +142,24 @@ available rather than inventing data:
 | Private (randomised) Wi-Fi addresses hide the real vendor | Detected and explained on the detail page |
 | Exact hardware models are not exposed | Device type is presented as a heuristic guess |
 | SSID needs the *Access Wi-Fi Information* capability | Falls back to identifying the network by subnet |
+| Resolver configuration is unreadable (`libresolv` is not exposed to Swift on iOS) | Gateway is shown, explicitly labelled "DNS (inferred)" |
 | No background network scanning | Automatic scans run only while the app is open |
 
 No private APIs are used. Every system call — `getifaddrs`, `sysctl(CTL_NET,
-PF_ROUTE)`, `socket`/`poll`/`recvfrom`, `getnameinfo`, `res_ninit` — is public
-BSD or Foundation API available to sandboxed apps.
+PF_ROUTE)`, `socket`/`poll`/`recvfrom`, `getnameinfo` — is public BSD or
+Foundation API available to sandboxed apps.
+
+One detail worth knowing: the iOS SDK does not expose `<net/route.h>` to Swift,
+so `RouteTable` mirrors the `rt_msghdr` layout and the `RTF_*`/`RTAX_*`
+constants itself. That is the documented kernel/user ABI, not a private API, and
+it uses only fixed-width fields — but it is the part of the codebase most worth
+re-checking against a future SDK.
 
 ### Optional capability
 
 To show the Wi-Fi network name, add **Access Wi-Fi Information** in
 *Signing & Capabilities*. Without it `NEHotspotNetwork.fetchCurrent` returns
 `nil`, which the app handles gracefully — scanning is unaffected.
-
-`libresolv` is linked (`OTHER_LDFLAGS = -lresolv`) to read the configured DNS
-servers. If you prefer to drop that dependency, remove the flag and
-`DNSResolver.systemResolvers()`; the UI already falls back to showing the
-gateway.
 
 ---
 

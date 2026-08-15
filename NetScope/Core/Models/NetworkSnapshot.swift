@@ -45,6 +45,10 @@ struct NetworkSnapshot: Hashable, Sendable, Codable {
     var broadcast: IPv4?
     var dnsServers: [IPv4] = []
 
+    /// True when `dnsServers` was guessed from the gateway rather than read
+    /// from the system — iOS exposes no API for the resolver configuration.
+    var dnsServersAreInferred: Bool = false
+
     /// Only populated when the Access Wi-Fi Information entitlement is present.
     var ssid: String?
     var bssid: String?
