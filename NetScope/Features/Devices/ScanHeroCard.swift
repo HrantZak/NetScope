@@ -101,7 +101,9 @@ struct ScanHeroCard: View {
         var parts: [String] = []
         if let local = snapshot.localAddress { parts.append(local.description) }
         if let subnet = snapshot.subnet { parts.append("/\(subnet.prefixLength)") }
-        if let gateway = snapshot.gateway { parts.append("gw \(gateway)") }
+        if let gateway = snapshot.gateway {
+            parts.append(snapshot.gatewayIsInferred == true ? "gw ~\(gateway)" : "gw \(gateway)")
+        }
         return parts.joined(separator: "  ")
     }
 

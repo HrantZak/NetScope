@@ -44,8 +44,9 @@ enum RouteTable {
     // MARK: - Public
 
     /// Address of the default gateway (`0.0.0.0/0` route), if present.
-    static func defaultGateway() -> IPv4? {
+    static func defaultGateway(in subnet: IPv4Subnet? = nil) -> IPv4? {
         guard let buffer = dumpRoutes(flags: RouteABI.flagGateway) else { return nil }
+        var exact: IPv4?
         var fallback: IPv4?
 
         forEachMessage(in: buffer) { message in
@@ -55,15 +56,24 @@ enum RouteTable {
                   let gateway = ipv4(from: gatewayBytes)
             else { return }
 
+            // iOS can expose a VPN or Private Relay route before the scoped
+            // Wi-Fi route. A gateway outside the interface subnet cannot be
+            // reached at layer 2 and must never be presented as the LAN router.
+            if let subnet, !subnet.contains(gateway) { return }
+            if let subnet,
+               gateway == subnet.networkAddress || gateway == subnet.broadcastAddress {
+                return
+            }
+
             // The default route has a 0.0.0.0 destination.
             if let destination = ipv4(from: destinationBytes), destination.raw == 0 {
-                fallback = gateway
+                exact = gateway
             } else if fallback == nil, gateway.isPrivate {
                 fallback = gateway
             }
         }
 
-        return fallback
+        return exact ?? fallback
     }
 
     /// Snapshot of the ARP cache: IPv4 address to `aa:bb:cc:dd:ee:ff`.

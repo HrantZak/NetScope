@@ -69,8 +69,9 @@ enum DeviceKind: String, Codable, Sendable, CaseIterable, Identifiable {
 /// engine produces these off the main actor and hands them to the repository.
 struct Device: Identifiable, Hashable, Sendable, Codable {
 
-    /// Stable identity. Prefers the MAC address (survives DHCP lease changes);
-    /// falls back to network-scoped IP when the ARP entry is unavailable.
+    /// Network-scoped identity containing the IP and, when trustworthy, MAC.
+    /// IP remains part of the key because proxy ARP and mesh routers can expose
+    /// one hardware address for several distinct clients.
     var id: String
 
     var ipAddress: IPv4

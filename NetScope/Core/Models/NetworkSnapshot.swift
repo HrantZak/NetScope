@@ -42,6 +42,11 @@ struct NetworkSnapshot: Hashable, Sendable, Codable {
     var netmask: IPv4?
     var subnet: IPv4Subnet?
     var gateway: IPv4?
+    /// True when the gateway was inferred from common LAN addresses because
+    /// iOS exposed only an unrelated VPN/tunnel default route.
+    // Optional for backwards-compatible decoding of snapshots exported by
+    // older builds that did not contain this field.
+    var gatewayIsInferred: Bool? = nil
     var broadcast: IPv4?
     var dnsServers: [IPv4] = []
 

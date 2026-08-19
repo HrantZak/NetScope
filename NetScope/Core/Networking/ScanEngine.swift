@@ -58,6 +58,20 @@ actor ScanEngine {
 
         emit(.started(totalHosts: targets.count))
 
+        // Publish this iPhone immediately. Network-path notifications can
+        // cancel a scan while the active sweep is still unwinding; previously
+        // that race could leave the router as the only visible row even though
+        // the local address was known from the start.
+        let localHost = LiveHost(address: localAddress, latency: 0, method: .local)
+        emit(.discovered(makeDevice(
+            host: localHost,
+            snapshot: snapshot,
+            mac: nil,
+            bonjour: [],
+            hostname: nil,
+            services: []
+        )))
+
         // Bonjour runs for the duration of the sweep rather than after it.
         async let bonjourServices: [BonjourService] = Self.browseBonjour(enabled: config.useBonjour)
 
@@ -116,7 +130,7 @@ actor ScanEngine {
         }
 
         // Always include ourselves — we are unambiguously on the network.
-        aliveHosts[localAddress] = LiveHost(address: localAddress, latency: 0, method: .local)
+        aliveHosts[localAddress] = localHost
 
         // 3. Build preliminary records and publish them immediately ---------
         var devices: [IPv4: Device] = [:]
@@ -350,6 +364,11 @@ actor ScanEngine {
         let networkID = snapshot.networkID
         let isGateway = snapshot.gateway == host.address
         let isLocal = snapshot.localAddress == host.address
+        // The neighbour table can contain a proxy-ARP MAC for our own address
+        // (and sometimes the same proxy MAC for several clients). Treating
+        // that value as a globally unique ID collapsed multiple IP addresses
+        // into one row. The local device has no meaningful ARP MAC at all.
+        let effectiveMAC = isLocal ? nil : mac
 
         let bonjourName = bonjour
             .map(\.name)
@@ -358,7 +377,7 @@ actor ScanEngine {
 
         let bonjourTypes = Array(Set(bonjour.map(\.type))).sorted()
         let advertisedModel = bonjour.compactMap(\.advertisedModel).first
-        let vendor = mac.flatMap(VendorDatabase.vendor(forMAC:))
+        let vendor = effectiveMAC.flatMap(VendorDatabase.vendor(forMAC:))
 
         var bonjourServices = bonjour.compactMap { service -> ServiceInfo? in
             guard let port = service.port else { return nil }
@@ -382,12 +401,17 @@ actor ScanEngine {
             isGateway: isGateway
         )
 
-        let identity = mac.map { "mac:\($0)" } ?? "\(networkID)|\(host.address)"
+        // IP is intentionally part of the key even when a MAC is visible.
+        // Proxy ARP, mesh systems and repeaters may expose one MAC for several
+        // real hosts; distinct LAN addresses must always remain distinct rows.
+        let identity = effectiveMAC.map {
+            "\(networkID)|mac:\($0)|ip:\(host.address)"
+        } ?? "\(networkID)|ip:\(host.address)"
 
         var device = Device(id: identity, ipAddress: host.address)
         device.hostname = hostname
         device.bonjourName = bonjourName
-        device.macAddress = mac
+        device.macAddress = effectiveMAC
         device.vendor = vendor
         device.kind = isLocal && kind == .unknown ? .phone : kind
         device.services = bonjourServices

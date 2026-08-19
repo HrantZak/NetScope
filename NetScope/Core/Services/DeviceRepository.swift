@@ -94,7 +94,26 @@ final class DeviceRepository {
     func apply(_ scanned: [Device]) {
         guard !scanned.isEmpty else { return }
 
-        for device in scanned {
+        for scannedDevice in scanned {
+            var device = scannedDevice
+
+            // Migrate identities written by builds that keyed a device only by
+            // MAC (or by the older network|IP format). User names, notes and
+            // favourites survive the upgrade, while the new key prevents
+            // proxy-ARP clients from collapsing into one row.
+            if storage[device.id] == nil {
+                let legacyIDs = [
+                    device.macAddress.map { "mac:\($0)" },
+                    "\(device.networkID)|\(device.ipAddress)"
+                ].compactMap { $0 }
+
+                if let legacyID = legacyIDs.first(where: { storage[$0] != nil }),
+                   let legacy = storage.removeValue(forKey: legacyID) {
+                    device = legacy.merging(scanned: device, isNewSighting: false)
+                    device.id = scannedDevice.id
+                }
+            }
+
             // A scan reports each host several times as details are filled in;
             // only the first report counts as a sighting.
             let isNewSighting = seenInCurrentScan.insert(device.id).inserted

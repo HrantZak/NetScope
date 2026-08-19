@@ -31,7 +31,21 @@ enum NetworkInfoProvider {
         snapshot.netmask = interface.netmask
         snapshot.subnet = interface.subnet
         snapshot.broadcast = interface.broadcast ?? interface.subnet.broadcastAddress
-        snapshot.gateway = RouteTable.defaultGateway()
+        snapshot.gateway = RouteTable.defaultGateway(in: interface.subnet)
+
+        if snapshot.gateway == nil, interface.subnet.prefixLength < 31 {
+            // Sandboxed iOS builds occasionally hide the scoped default route
+            // while still exposing an unrelated VPN route. Prefer a common
+            // router address that exists in ARP; if ARP is hidden too, .1 is a
+            // useful and subnet-correct fallback rather than displaying the
+            // VPN gateway as if it belonged to Wi-Fi.
+            let arp = RouteTable.arpTable()
+            let firstHost = IPv4(raw: interface.subnet.networkAddress.raw &+ 1)
+            let lastHost = IPv4(raw: interface.subnet.broadcastAddress.raw &- 1)
+            let common = [firstHost, lastHost]
+            snapshot.gateway = common.first(where: { arp[$0] != nil }) ?? firstHost
+            snapshot.gatewayIsInferred = true
+        }
 
         let resolvers = DNSResolver.systemResolvers()
         if resolvers.isEmpty, let gateway = snapshot.gateway {

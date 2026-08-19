@@ -183,7 +183,11 @@ struct NetworkView: View {
                 Divider()
                 DetailRow(label: "Network", value: snapshot.subnet?.description, systemImage: "network")
                 Divider()
-                DetailRow(label: "Gateway", value: snapshot.gateway?.description, systemImage: "arrow.triangle.branch")
+                DetailRow(
+                    label: snapshot.gatewayIsInferred == true ? "Gateway (inferred)" : "Gateway",
+                    value: snapshot.gateway?.description,
+                    systemImage: "arrow.triangle.branch"
+                )
                 Divider()
                 DetailRow(label: "Broadcast", value: snapshot.broadcast?.description, systemImage: "dot.radiowaves.left.and.right")
                 Divider()
