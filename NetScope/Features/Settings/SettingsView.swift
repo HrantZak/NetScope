@@ -151,7 +151,7 @@ struct SettingsView: View {
         } header: {
             Text("Discovery")
         } footer: {
-            Text("TCP fallback finds hosts that ignore ping. It only kicks in when ICMP returns almost nothing, because it is much slower.")
+            Text("TCP fallback deeply checks every address that ignores ping. It finds more phones, TVs and smart devices, but makes a complete scan take longer.")
         }
     }
 

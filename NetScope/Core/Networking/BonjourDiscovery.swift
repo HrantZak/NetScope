@@ -31,7 +31,13 @@ enum BonjourDiscovery {
         "_airplay._tcp", "_raop._tcp", "_companion-link._tcp", "_hap._tcp", "_homekit._tcp",
         "_googlecast._tcp", "_spotify-connect._tcp", "_sonos._tcp",
         "_rdlink._tcp", "_device-info._tcp", "_workstation._tcp", "_rfb._tcp",
-        "_daap._tcp", "_dacp._tcp", "_touch-able._tcp"
+        "_daap._tcp", "_dacp._tcp", "_touch-able._tcp",
+        "_mqtt._tcp", "_secure-mqtt._tcp", "_rtsp._tcp", "_ftp._tcp",
+        "_telnet._tcp", "_http-alt._tcp", "_webdav._tcp", "_webdavs._tcp",
+        "_uscans._tcp", "_uscan._tcp", "_scanner._udp", "_sleep-proxy._udp",
+        "_matter._tcp", "_matter._udp", "_meshcop._udp", "_miio._udp",
+        "_adb._tcp", "_nvstream._tcp", "_steamlocal._tcp", "_xbox._tcp",
+        "_amzn-wplay._tcp", "_airplay._udp", "_raop._udp", "_companion-link._udp"
     ]
 
     private static let queue = DispatchQueue(label: "com.netscope.bonjour", qos: .userInitiated)

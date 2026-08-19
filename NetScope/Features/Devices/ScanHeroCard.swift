@@ -16,8 +16,28 @@ struct ScanHeroCard: View {
 
             HStack(alignment: .center, spacing: Theme.Spacing.l) {
                 radar(progress: progress, isScanning: scanner.isScanning)
-                metrics(progress: progress, scanner: scanner)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(scanner.isScanning ? progress.phase.title.uppercased() : "NETWORK OVERVIEW")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(1.1)
+                        .foregroundStyle(Theme.Colors.accent)
+
+                    Text("\(app.repository.devices.filter(\.isOnline).count) online")
+                        .font(.metric(29, weight: .bold))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .contentTransition(.numericText())
+
+                    Text(networkSummary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            metrics(scanner: scanner)
+            discoveryStrip
 
             if scanner.isScanning {
                 VStack(spacing: 6) {
@@ -63,7 +83,11 @@ struct ScanHeroCard: View {
                     .transition(.opacity)
             }
         }
-        .glassSurface(cornerRadius: Theme.Radius.extraLarge, padding: Theme.Spacing.l)
+        .glassSurface(
+            cornerRadius: Theme.Radius.extraLarge,
+            padding: Theme.Spacing.l,
+            tint: scanner.isScanning ? Theme.Colors.violet : Theme.Colors.accent
+        )
         .animation(Theme.Motion.spring, value: app.scanner.isScanning)
     }
 
@@ -130,54 +154,102 @@ struct ScanHeroCard: View {
         .animation(Theme.Motion.smooth, value: app.repository.devices.count)
     }
 
-    private func metrics(progress: ScanProgress, scanner: ScanCoordinator) -> some View {
+    private func metrics(scanner: ScanCoordinator) -> some View {
         let devices = app.repository.devices
         let online = devices.filter(\.isOnline).count
         let latencies = devices.compactMap(\.latencyMilliseconds)
         let average = latencies.isEmpty ? nil : latencies.reduce(0, +) / Double(latencies.count)
 
-        return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            metricLine(
+        return HStack(spacing: Theme.Spacing.s) {
+            metricTile(
                 symbol: "checkmark.circle.fill",
                 tint: Theme.Colors.online,
                 label: "Online",
                 value: "\(online)"
             )
-            metricLine(
+            metricTile(
                 symbol: "timer",
                 tint: Theme.Colors.latency(average),
-                label: "Avg latency",
+                label: "Latency",
                 value: Formatters.latency(average)
             )
-            metricLine(
+            metricTile(
                 symbol: "clock.arrow.circlepath",
-                tint: Theme.Colors.textSecondary,
-                label: "Last scan",
+                tint: Theme.Colors.violet,
+                label: "Updated",
                 value: scanner.lastCompletedAt.map { Formatters.relativeString(from: $0) } ?? "never"
             )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func metricLine(symbol: String, tint: Color, label: String, value: String) -> some View {
-        HStack(spacing: 8) {
+    private func metricTile(symbol: String, tint: Color, label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(tint)
-                .frame(width: 16)
-
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.Colors.textSecondary)
-
-            Spacer(minLength: 4)
 
             Text(value)
-                .font(.metric(13))
+                .font(.metric(14, weight: .bold))
                 .foregroundStyle(Theme.Colors.textPrimary)
                 .contentTransition(.numericText())
                 .lineLimit(1)
+                .minimumScaleFactor(0.65)
+
+            Text(label.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.5)
+                .foregroundStyle(Theme.Colors.textTertiary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Spacing.s)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                .fill(Theme.Colors.surface.opacity(0.72))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                .strokeBorder(tint.opacity(0.16), lineWidth: 1)
+        }
+    }
+
+    private var networkSummary: String {
+        let devices = app.repository.devices
+        let remoteCount = devices.filter { !$0.isLocalDevice }.count
+        let serviceCount = devices.filter { !$0.services.isEmpty }.count
+        return "\(remoteCount) remote · \(serviceCount) with services"
+    }
+
+    private var discoveryStrip: some View {
+        let devices = app.repository.devices
+        let methods: [DiscoveryMethod] = [.icmp, .tcp, .bonjour, .arp, .route]
+
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(methods, id: \.rawValue) { method in
+                    let count = devices.filter { $0.discoveryMethod == method }.count
+                    HStack(spacing: 5) {
+                        Image(systemName: method.symbolName)
+                            .font(.system(size: 9, weight: .bold))
+                        Text(method.title)
+                            .lineLimit(1)
+                        Text("\(count)")
+                            .font(.metric(10, weight: .bold))
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(count > 0 ? Theme.Colors.accent : Theme.Colors.textTertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(
+                            count > 0
+                                ? Theme.Colors.accent.opacity(0.12)
+                                : Theme.Colors.surfaceSunken.opacity(0.7)
+                        )
+                    )
+                }
+            }
+        }
+        .accessibilityLabel("Discovery method summary")
     }
 
     private func actionRow(isScanning: Bool, canScan: Bool, permissionDenied: Bool) -> some View {

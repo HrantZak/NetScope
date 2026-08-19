@@ -13,6 +13,10 @@ struct DeviceCardRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.m) {
+            Capsule()
+                .fill(device.isOnline ? Theme.Colors.kind(device.kind) : Theme.Colors.offline)
+                .frame(width: 3, height: 48)
+
             DeviceIcon(kind: device.kind, size: 46, isOnline: device.isOnline)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -36,6 +40,11 @@ struct DeviceCardRow: View {
                         .font(.technical(12))
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .lineLimit(1)
+
+                    Image(systemName: device.discoveryMethod.symbolName)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.textTertiary)
+                        .accessibilityLabel("Found via \(device.discoveryMethod.title)")
                 }
 
                 if !device.services.isEmpty {
@@ -47,6 +56,12 @@ struct DeviceCardRow: View {
 
             VStack(alignment: .trailing, spacing: 8) {
                 LatencyBadge(milliseconds: device.latencyMilliseconds)
+
+                Text(device.kind.title.uppercased())
+                    .font(.system(size: 8, weight: .bold))
+                    .tracking(0.45)
+                    .foregroundStyle(Theme.Colors.kind(device.kind))
+                    .lineLimit(1)
 
                 if device.isFavorite {
                     Image(systemName: "star.fill")

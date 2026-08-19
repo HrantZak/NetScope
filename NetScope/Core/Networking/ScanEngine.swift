@@ -217,7 +217,7 @@ actor ScanEngine {
         let cancelled = MutableBox(false)
         let total = targets.count
 
-        let icmpAvailable = await withTaskCancellationHandler {
+        _ = await withTaskCancellationHandler {
             await sweeper.sweep(
                 targets: targets,
                 timeout: config.pingTimeout,
@@ -238,11 +238,11 @@ actor ScanEngine {
             cancelled.value = true
         }
 
-        // TCP fallback is deliberately conditional: connecting to every silent
-        // address is an order of magnitude slower than the sweep, and it only
-        // pays off when ICMP told us nothing (filtered network, or no raw
-        // socket at all).
-        let shouldFallBack = config.useTCPFallback && (!icmpAvailable || found.value.count < 3)
+        // Always probe addresses that stayed silent when deep discovery is
+        // enabled. Earlier builds stopped after ICMP found three hosts, which
+        // systematically missed phones, TVs and IoT devices that block ping.
+        // The bounded pool below keeps this exhaustive pass safe for iOS.
+        let shouldFallBack = config.useTCPFallback
         guard shouldFallBack, !Task.isCancelled else { return found.value }
 
         emit(.phase(.sweeping))
@@ -254,13 +254,13 @@ actor ScanEngine {
         // parallelism to avoid hundreds of simultaneous NWConnections. That
         // used to overwhelm iOS on larger subnets and turn real replies into
         // apparent timeouts.
-        let fallbackConcurrency = min(config.hostConcurrency, 24)
+        let fallbackConcurrency = min(config.hostConcurrency, 12)
         await concurrentForEach(silent, limit: fallbackConcurrency) { address -> ProbeOutcome in
             let result = await PortScanner.quickLivenessProbe(
                 address: address,
                 // A deliberately diverse set: routers, computers, printers,
                 // TVs and Apple devices rarely expose the same three ports.
-                ports: [22, 53, 80, 139, 443, 445, 554, 631, 8008, 8080, 8443, 9100, 62078],
+                ports: [21, 22, 23, 53, 80, 135, 139, 443, 445, 515, 548, 554, 631, 1883, 3389, 5900, 7000, 8008, 8080, 8443, 8883, 9100, 62078],
                 timeout: timeout
             )
             return ProbeOutcome(address: address, result: result)

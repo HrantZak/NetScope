@@ -18,6 +18,13 @@ struct CardSurface: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Theme.Colors.surface)
+                    .overlay {
+                        if isHighlighted {
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(Theme.Gradients.accent)
+                                .opacity(0.09)
+                        }
+                    }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -26,7 +33,12 @@ struct CardSurface: ViewModifier {
                         lineWidth: isHighlighted ? 1.5 : 1
                     )
             )
-            .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+            .shadow(
+                color: isHighlighted ? Theme.Colors.accent.opacity(0.16) : Color.black.opacity(0.07),
+                radius: isHighlighted ? 18 : 12,
+                x: 0,
+                y: 7
+            )
     }
 }
 

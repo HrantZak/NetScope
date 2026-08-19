@@ -240,4 +240,15 @@ enum DiscoveryMethod: String, Codable, Sendable {
         case .local: "This device"
         }
     }
+
+    var symbolName: String {
+        switch self {
+        case .icmp: "wave.3.right"
+        case .tcp: "cable.connector"
+        case .bonjour: "dot.radiowaves.left.and.right"
+        case .arp: "point.3.connected.trianglepath.dotted"
+        case .route: "arrow.triangle.branch"
+        case .local: "iphone"
+        }
+    }
 }

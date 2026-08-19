@@ -142,7 +142,7 @@ Hosts are emitted as soon as they answer, so the list fills in live.
   Wi-Fi security, new/unknown/offline devices, latency, identity quality,
   privacy addresses, web dashboards, remote administration, shares and printers
 - Multi-source discovery that combines pre/post-sweep ARP data, the system
-  route, Bonjour, ICMP and a diverse 13-port TCP fallback
+  route, an expanded Bonjour catalogue, ICMP and a diverse 23-port TCP fallback
 
 ---
 

@@ -74,6 +74,30 @@
 		<string>_daap._tcp</string>
 		<string>_dacp._tcp</string>
 		<string>_touch-able._tcp</string>
+		<string>_mqtt._tcp</string>
+		<string>_secure-mqtt._tcp</string>
+		<string>_rtsp._tcp</string>
+		<string>_ftp._tcp</string>
+		<string>_telnet._tcp</string>
+		<string>_http-alt._tcp</string>
+		<string>_webdav._tcp</string>
+		<string>_webdavs._tcp</string>
+		<string>_uscans._tcp</string>
+		<string>_uscan._tcp</string>
+		<string>_scanner._udp</string>
+		<string>_sleep-proxy._udp</string>
+		<string>_matter._tcp</string>
+		<string>_matter._udp</string>
+		<string>_meshcop._udp</string>
+		<string>_miio._udp</string>
+		<string>_adb._tcp</string>
+		<string>_nvstream._tcp</string>
+		<string>_steamlocal._tcp</string>
+		<string>_xbox._tcp</string>
+		<string>_amzn-wplay._tcp</string>
+		<string>_airplay._udp</string>
+		<string>_raop._udp</string>
+		<string>_companion-link._udp</string>
 		<string>_netscope._tcp</string>
 	</array>
 </dict>
