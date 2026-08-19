@@ -7,11 +7,18 @@ name: Build unsigned IPA
 on:
   push:
     branches: [main, master]
+  pull_request:
+    branches: [main, master]
   workflow_dispatch:
+
+concurrency:
+  group: netscope-ipa-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -43,17 +50,48 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO
+            ONLY_ACTIVE_ARCH=NO \
+            | tee xcodebuild.log
 
       - name: Package into an IPA
         run: |
+          set -euo pipefail
+          test -d build/Build/Products/Release-iphoneos/NetScope.app
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/NetScope.app Payload/
           zip -qry NetScope.ipa Payload
           ls -lh NetScope.ipa
 
+      - name: Validate IPA
+        run: |
+          set -euo pipefail
+          unzip -t NetScope.ipa
+          unzip -l NetScope.ipa | grep -q 'Payload/NetScope.app/NetScope'
+          plutil -lint Payload/NetScope.app/Info.plist
+          echo "IPA_SHA256=$(shasum -a 256 NetScope.ipa | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Build summary
+        run: |
+          {
+            echo "## NetScope IPA"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- SHA-256: \`$IPA_SHA256\`"
+            echo "- Install: sign the downloaded IPA with Sideloadly, AltStore or your signing service."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@v4
+        if: success() && github.event_name != 'pull_request'
         with:
           name: NetScope-unsigned-ipa
           path: NetScope.ipa
           retention-days: 30
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetScope-build-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 14

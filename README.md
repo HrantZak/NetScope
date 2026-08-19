@@ -22,6 +22,21 @@ Everything runs on device.
 
 Requirements: iOS 17.0+, Xcode 16+, Swift 6 language mode.
 
+### Building the IPA from Windows
+
+No Mac or local Xcode installation is required for the repository workflow:
+
+1. Commit and push the project to `main` with GitHub Desktop.
+2. Open the repository on GitHub and select **Actions → Build unsigned IPA**.
+3. Wait for the green build, open it and download the
+   **NetScope-unsigned-ipa** artifact.
+4. Extract the artifact ZIP and sign/install `NetScope.ipa` with Sideloadly,
+   AltStore or the signing service you normally use.
+
+The workflow builds on a GitHub-hosted macOS runner, validates the IPA and
+prints its SHA-256 checksum. If compilation fails, the run provides a separate
+`NetScope-build-log` artifact with the complete compiler output.
+
 The target uses an Xcode 16 *synchronised folder group*, so new files added
 under `NetScope/` are picked up automatically — no `project.pbxproj` edits.
 
@@ -123,6 +138,11 @@ Hosts are emitted as soon as they answer, so the list fills in live.
 - CSV / JSON export via the share sheet
 - Scan tuning: profile, concurrency, timeouts, retries, host cap, retention
 - Light/dark/system appearance, Dynamic Type, reduced-motion support
+- A 20-point smart network audit covering connection health, gateway and DNS,
+  Wi-Fi security, new/unknown/offline devices, latency, identity quality,
+  privacy addresses, web dashboards, remote administration, shares and printers
+- Multi-source discovery that combines pre/post-sweep ARP data, the system
+  route, Bonjour, ICMP and a diverse 13-port TCP fallback
 
 ---
 

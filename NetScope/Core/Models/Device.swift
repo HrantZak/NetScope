@@ -226,6 +226,7 @@ enum DiscoveryMethod: String, Codable, Sendable {
     case tcp
     case bonjour
     case arp
+    case route
     case local
 
     var title: String {
@@ -234,6 +235,7 @@ enum DiscoveryMethod: String, Codable, Sendable {
         case .tcp: "TCP probe"
         case .bonjour: "Bonjour"
         case .arp: "ARP cache"
+        case .route: "System route"
         case .local: "This device"
         }
     }

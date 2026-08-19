@@ -61,6 +61,11 @@ actor ScanEngine {
         // Bonjour runs for the duration of the sweep rather than after it.
         async let bonjourServices: [BonjourService] = Self.browseBonjour(enabled: config.useBonjour)
 
+        // Capture neighbours both before and after the active sweep. Some
+        // routers age their ARP entries very quickly, while others already
+        // have useful entries before our first packet is sent.
+        let arpBeforeSweep = RouteTable.arpTable()
+
         // 1. Liveness ------------------------------------------------------
         emit(.phase(.sweeping))
         let liveness = await discoverLiveHosts(
@@ -76,7 +81,8 @@ actor ScanEngine {
         }
 
         // 2. Enrich with layer-2 facts -------------------------------------
-        let arpTable = RouteTable.arpTable()
+        let arpAfterSweep = RouteTable.arpTable()
+        let arpTable = arpBeforeSweep.merging(arpAfterSweep) { _, fresh in fresh }
         var aliveHosts = liveness
 
         // Sending probes populates the ARP cache even for hosts that drop ICMP,
@@ -84,6 +90,17 @@ actor ScanEngine {
         for (address, _) in arpTable where subnet.contains(address) && aliveHosts[address] == nil {
             guard address != localAddress else { continue }
             aliveHosts[address] = LiveHost(address: address, latency: nil, method: .arp)
+        }
+
+        // A gateway can legitimately ignore ICMP and have no administration
+        // port open. It is nevertheless known to be present because the
+        // system route points at it. Previously such networks often showed
+        // only "This iPhone", which looked like a broken scan.
+        if let gateway = snapshot.gateway,
+           subnet.contains(gateway),
+           gateway != localAddress,
+           aliveHosts[gateway] == nil {
+            aliveHosts[gateway] = LiveHost(address: gateway, latency: nil, method: .route)
         }
 
         let services = await bonjourServices
@@ -219,10 +236,17 @@ actor ScanEngine {
         let probed = MutableBox(0)
         let timeout = config.portTimeout
 
-        await concurrentForEach(silent, limit: config.hostConcurrency) { address -> ProbeOutcome in
+        // Each host races several ports internally, so cap host-level
+        // parallelism to avoid hundreds of simultaneous NWConnections. That
+        // used to overwhelm iOS on larger subnets and turn real replies into
+        // apparent timeouts.
+        let fallbackConcurrency = min(config.hostConcurrency, 24)
+        await concurrentForEach(silent, limit: fallbackConcurrency) { address -> ProbeOutcome in
             let result = await PortScanner.quickLivenessProbe(
                 address: address,
-                ports: [80, 443, 445],
+                // A deliberately diverse set: routers, computers, printers,
+                // TVs and Apple devices rarely expose the same three ports.
+                ports: [22, 53, 80, 139, 443, 445, 554, 631, 8008, 8080, 8443, 9100, 62078],
                 timeout: timeout
             )
             return ProbeOutcome(address: address, result: result)

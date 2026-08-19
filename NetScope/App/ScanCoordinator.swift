@@ -18,6 +18,7 @@ final class ScanCoordinator {
 
     private(set) var progress: ScanProgress = .idle
     private(set) var lastError: String?
+    private(set) var lastNotice: String?
     private(set) var lastCompletedAt: Date?
     private(set) var lastScanDuration: TimeInterval?
 
@@ -62,6 +63,7 @@ final class ScanCoordinator {
         }
 
         lastError = nil
+        lastNotice = nil
 
         // A just-cancelled scan may still be unwinding inside the engine, which
         // refuses to start a second one. Waiting for it here makes a rapid
@@ -175,9 +177,13 @@ final class ScanCoordinator {
         case .finished(let deviceCount):
             progress.foundDevices = deviceCount
             progress.phase = .finishing
+            if deviceCount <= 1 {
+                lastNotice = "Only this iPhone answered. Make sure Local Network access is enabled and that the router's client/AP isolation is off."
+            }
 
         case .failed(let message):
             lastError = message
+            lastNotice = nil
             progress.phase = .idle
             progress.finishedAt = .now
             repository.recordEvent(

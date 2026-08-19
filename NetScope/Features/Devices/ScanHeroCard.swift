@@ -41,12 +41,24 @@ struct ScanHeroCard: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            actionRow(isScanning: scanner.isScanning, canScan: scanner.canScan)
+            actionRow(
+                isScanning: scanner.isScanning,
+                canScan: scanner.canScan && app.permission != .denied,
+                permissionDenied: app.permission == .denied
+            )
 
             if let error = scanner.lastError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.Colors.warning)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
+            }
+
+            if let notice = scanner.lastNotice {
+                Label(notice, systemImage: "info.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.Colors.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .transition(.opacity)
             }
@@ -166,11 +178,13 @@ struct ScanHeroCard: View {
         }
     }
 
-    private func actionRow(isScanning: Bool, canScan: Bool) -> some View {
+    private func actionRow(isScanning: Bool, canScan: Bool, permissionDenied: Bool) -> some View {
         HStack(spacing: Theme.Spacing.m) {
             Button {
                 Haptics.medium()
-                if isScanning {
+                if permissionDenied {
+                    openSystemSettings()
+                } else if isScanning {
                     app.scanner.cancelScan()
                 } else {
                     app.scanner.startScan()
@@ -179,7 +193,7 @@ struct ScanHeroCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: isScanning ? "stop.fill" : "dot.radiowaves.left.and.right")
                         .font(.system(size: 14, weight: .bold))
-                    Text(isScanning ? "Stop" : "Scan network")
+                    Text(permissionDenied ? "Enable access" : (isScanning ? "Stop" : "Scan network"))
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -188,8 +202,8 @@ struct ScanHeroCard: View {
                     ? LinearGradient(colors: [Theme.Colors.rose, Theme.Colors.amber], startPoint: .leading, endPoint: .trailing)
                     : Theme.Gradients.accent
             ))
-            .disabled(!canScan && !isScanning)
-            .opacity(canScan || isScanning ? 1 : 0.5)
+            .disabled(!permissionDenied && !canScan && !isScanning)
+            .opacity(permissionDenied || canScan || isScanning ? 1 : 0.5)
 
             Button {
                 Haptics.light()
@@ -204,5 +218,10 @@ struct ScanHeroCard: View {
             .buttonStyle(.pressable)
             .accessibilityLabel("Refresh network information")
         }
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }

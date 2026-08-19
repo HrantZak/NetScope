@@ -18,6 +18,7 @@ struct NetworkView: View {
                     latencyDistributionCard
                     trendCard
                     topPortsCard
+                    smartChecksCard
                     permissionCard
                 }
                 .padding(.horizontal, Theme.Spacing.l)
@@ -41,6 +42,74 @@ struct NetworkView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Smart checks
+
+    private var smartChecksCard: some View {
+        let checks = NetworkAudit.checks(snapshot: app.snapshot, devices: app.repository.devices)
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            SectionHeader(
+                "20 smart checks",
+                subtitle: "Connection, discovery, identity and exposed services",
+                systemImage: "checkmark.shield.fill",
+                accessory: AnyView(
+                    Button {
+                        copyAuditReport(checks)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .buttonStyle(.pressable)
+                    .accessibilityLabel("Copy audit report")
+                )
+            )
+
+            VStack(spacing: 0) {
+                ForEach(checks) { check in
+                    HStack(alignment: .top, spacing: Theme.Spacing.m) {
+                        Image(systemName: check.level.symbolName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(auditColor(check.level))
+                            .frame(width: 20)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(check.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                            Text(check.detail)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 8)
+
+                    if check.id != checks.last?.id { Divider() }
+                }
+            }
+        }
+        .cardSurface()
+    }
+
+    private func auditColor(_ level: NetworkAudit.Level) -> Color {
+        switch level {
+        case .good: Theme.Colors.online
+        case .info: Theme.Colors.accent
+        case .warning: Theme.Colors.warning
+        }
+    }
+
+    private func copyAuditReport(_ checks: [NetworkAudit.Check]) {
+        let lines = checks.map { check in
+            let marker = check.level == .warning ? "⚠︎" : (check.level == .good ? "✓" : "•")
+            return "\(marker) \(check.title): \(check.detail)"
+        }
+        let heading = "NetScope audit — \(app.snapshot.displayName)"
+        UIPasteboard.general.string = ([heading, ""] + lines).joined(separator: "\n")
+        Haptics.success()
     }
 
     // MARK: - Connection
